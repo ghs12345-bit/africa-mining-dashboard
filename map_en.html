@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central-Southern Africa Mining Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+:root{--bg:#fff;--panel:#f7f8fa;--text:#1a1d24;--muted:#5a6172;--accent:#0f62fe;--line:#e5e8ee;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg);height:100vh;overflow:hidden;}
+header{background:linear-gradient(135deg,#0b1f3a,#123a63);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:16px;}
+header h1{margin:0;font-size:17px;font-weight:600;}
+header .meta{color:#bcd0e8;font-size:12px;}
+header .badge{margin-left:auto;display:flex;gap:8px;}
+header .badge .kpi{background:rgba(255,255,255,.12);border-radius:6px;padding:4px 12px;text-align:center;}
+header .badge .kpi .n{font-size:16px;font-weight:700;}
+header .badge .kpi .l{font-size:10px;color:#bcd0e8;}
+.layout{display:flex;height:calc(100vh - 56px);}
+nav{width:280px;min-width:280px;overflow-y:auto;padding:12px;background:var(--panel);border-right:1px solid var(--line);}
+nav .sb-title{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+#sb-tabs{display:flex;gap:6px;margin-bottom:10px;}
+#sb-tabs .sb-tab{flex:1;padding:6px 0;font-size:12px;font-weight:600;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted);cursor:pointer;}
+#sb-tabs .sb-tab:hover{background:#eef2f7;}
+#sb-tabs .sb-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+#sb-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:0;}
+#sb-filter .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:12px;color:#fff;cursor:default;}
+#sb-filter .chip .x{cursor:pointer;font-weight:700;padding:0 2px;}
+#sb-filter .clear{font-size:11px;color:var(--accent);cursor:pointer;background:none;border:none;padding:2px 4px;}
+.chip-c-country{background:#0f62fe;}
+.chip-c-company{background:#e67e22;}
+.chip-c-category{background:#16a085;}
+.chip-c-stage{background:#8e44ad;}
+.sb-node{margin-bottom:2px;}
+.sb-row{display:flex;align-items:center;gap:6px;padding:7px 8px;font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;user-select:none;}
+.sb-row:hover{background:#e8f0fe;}
+.sb-row .exp-arrow{font-size:9px;color:var(--muted);width:12px;text-align:center;flex-shrink:0;transition:transform .15s;}
+.sb-node.open > .sb-row .exp-arrow{transform:rotate(90deg);}
+.sb-row .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-row .cnt{color:var(--muted);font-weight:400;font-size:11px;flex-shrink:0;}
+.sb-row.active{background:#e8f0fe;color:var(--accent);}
+.sb-row.sb-cat{background:#eef2f7;font-weight:700;}
+.sb-row.sb-cat:hover{background:#e8f0fe;}
+.sb-row.sb-cat .cnt{color:var(--muted);font-weight:600;}
+.sb-children{display:none;padding:2px 0 4px 16px;border-left:2px solid var(--line);margin-left:11px;}
+.sb-node.open > .sb-children{display:block;}
+.sb-child{display:flex;align-items:center;gap:4px;padding:5px 8px;font-size:12px;cursor:pointer;border-radius:4px;color:var(--text);}
+.sb-child:hover{background:#e8f0fe;}
+.sb-child .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sb-child .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-child .cnt{color:var(--muted);font-size:11px;flex-shrink:0;margin-left:auto;}
+.sb-child.active{background:#e8f0fe;color:var(--accent);font-weight:600;}
+.sb-child.child-country{font-weight:600;}
+#map-wrap{flex:1;position:relative;}
+#map{position:absolute;inset:0;}
+.leaflet-container{background:#eef2f7;}
+.right-panel{position:absolute;top:12px;right:12px;z-index:900;display:flex;flex-direction:column;gap:8px;width:224px;}
+.panel-toggle{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.panel-toggle label{display:flex;align-items:center;gap:6px;cursor:pointer;padding:2px 0;user-select:none;}
+.panel-toggle input{accent-color:var(--accent);}
+.stage-panel{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.sp-title{font-weight:700;color:var(--muted);font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
+.sp-item{display:flex;align-items:center;gap:6px;cursor:pointer;padding:2px 0;user-select:none;}
+.sp-item:hover{background:#eef2f7;margin:0 -8px;padding:2px 8px;border-radius:4px;}
+.sp-item input{accent-color:var(--accent);flex-shrink:0;margin:0;}
+.sp-item .sp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sp-item .sp-lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sp-item .sp-cnt{color:var(--muted);font-size:11px;}
+.map-legend{position:absolute;right:12px;bottom:12px;z-index:800;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.1);max-height:60vh;overflow-y:auto;}
+.lg-title{font-weight:700;color:var(--muted);font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
+.lg-row{display:flex;align-items:center;gap:6px;padding:1px 0;}
+.lg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.lg-cnt{color:#999;margin-left:auto;padding-left:10px;}
+.mine-dot{width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;box-sizing:border-box;box-shadow:0 0 2px rgba(0,0,0,.3);}
+.mine-dot-wrap{background:transparent;border:none;}
+.pp{font-size:13px;min-width:240px;max-width:300px;}
+.pp h3{margin:0 0 8px;font-size:15px;border-bottom:1px solid var(--line);padding-bottom:6px;}
+.pp .pp-sec{margin:8px 0 4px;font-weight:600;color:var(--accent);font-size:11px;text-transform:uppercase;letter-spacing:.4px;}
+.pp .pp-sub{margin:6px 0 2px;font-weight:600;color:var(--text);font-size:12px;}
+.pp table{width:100%;border-collapse:collapse;}
+.pp td{padding:3px 0;vertical-align:top;font-size:12px;}
+.pp td.k{color:var(--muted);padding-right:10px;white-space:nowrap;width:96px;}
+</style>
+<script src="data.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+</head>
+<body>
+<header>
+<h1>Central-Southern Africa Mining Map</h1>
+<div class="meta">DRC · Zambia · Namibia · Botswana  |  Mines + Mining Claims</div>
+<div class="badge">
+<div class="kpi"><div class="n" id="kpiMines">0</div><div class="l">mines</div></div>
+<div class="kpi"><div class="n" id="kpiClaims">0</div><div class="l">claims</div></div>
+<div class="kpi"><div class="n" id="kpiCompanies">0</div><div class="l">companies</div></div>
+</div>
+</header>
+<div class="layout">
+<nav>
+<div class="sb-title">Filter by</div>
+<div id="sb-tabs">
+<button class="sb-tab active" data-dim="country">Country</button>
+<button class="sb-tab" data-dim="company">Company</button>
+</div>
+<div id="sb-filter"></div>
+<div id="sb-list"></div>
+</nav>
+<div id="map-wrap">
+<div id="map"></div>
+<div class="right-panel">
+<div class="stage-panel">
+<div class="sp-title">Development Stage</div>
+<div id="stage-list"></div>
+</div>
+<div class="panel-toggle">
+<label><input type="checkbox" id="claims-toggle"> Mining Claims (15,564)</label>
+<label><input type="checkbox" id="cluster-toggle"> Cluster points</label>
+</div>
+</div>
+<div id="legend" class="map-legend"></div>
+</div>
+</div>
+
+<script>
+var D = window.DASHBOARD_DATA;
+var mines = D.mines, claims = D.claims, companies = D.companies, colors = D.colors;
+var COMM_NAMES = {};
+var T = {"legendTitle": "Primary Commodity", "clusterLabel": "Cluster points", "claimsLabel": "Mining Claims (15,564)", "sidebarTitle": "Filter by", "dimCountry": "Country", "dimCompany": "Company", "catNames": {"中资": "Chinese", "国际巨头": "Int'l Majors", "国有": "State-owned", "中小勘探": "Junior / Explorers"}, "stageTitle": "Development Stage", "stageNames": {"production": "Production", "development": "Development / Construction", "feasibility": "Feasibility / PFS", "exploration": "Exploration", "closed": "Closed", "unclassified": "Unclassified"}, "noFilter": "No filter — click a name to multi-select", "clearAll": "Clear", "badgeMines": "mines", "badgeClaims": "claims", "badgeCompanies": "companies", "popupBasic": "Basic Info", "popupOwnership": "Ownership", "popupResources": "Resources / Grade", "popupLoc": "Commodities / Location", "f_country": "Country", "f_state": "State/Province", "f_commodity": "Primary Commodity", "f_stage": "Development Stage", "f_status": "Activity Status", "f_ownerName": "Owner Name", "f_ownerType": "Owner Type", "f_ownerList": "List of Owners", "resCu": "Copper", "resAu": "Gold", "resProd": "Production / Mill-head Grade", "resExtraTitle": "Supplementary Resources", "resNoData": "Early-stage exploration — no public resource / grade data", "resNoDataProd": "Resource / grade data not publicly disclosed (tailings or SX-EW)", "f_MIgr": "M&I Grade", "f_MIct": "M&I Contained", "f_totgr": "Total Resource Grade", "f_totct": "Total Resource Contained", "f_Resgr": "M&I Incl Reserves Grade", "f_Resct": "M&I Incl Reserves Contained", "f_prodCu": "Copper Production 2025", "f_prodAu": "Gold Production 2025", "f_millCu": "Copper Mill-head Grade", "f_millAu": "Gold Mill-head Grade", "unitPct": "%", "unitGt": "g/t", "unitOz": "oz", "unitT": "t", "f_commList": "Commodities", "f_coord": "Coordinates", "f_locComment": "Location Comments", "f_operator": "Operator", "claimTitle": "Claim", "c_type": "Type", "c_status": "Status", "c_commodity": "Commodity", "c_area": "Area (ha)", "c_owners": "Direct Owners", "c_applied": "Applied", "c_granted": "Granted", "c_expiry": "Expiry", "minesInCountry": "mines", "companiesInCountry": "companies"};
+
+function colorOf(c){ return colors[c] || "#8a949e"; }
+function commName(c){ return (COMM_NAMES && COMM_NAMES[c]) ? COMM_NAMES[c] : c; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(v){ if(v==null || v==='' || v==='NA') return ''; if(typeof v==='number') return v.toLocaleString(undefined,{maximumFractionDigits:2}); return String(v); }
+function fv(v, unit){ if(v==null || v==='' || v==='NA') return null; return fmt(v) + (unit ? ' ' + unit : ''); }
+
+// ---------- 地图 ----------
+var map = L.map('map', { worldCopyJump:true, preferCanvas:true, zoomControl:true });
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Esri, OpenStreetMap contributors', maxZoom: 16
+}).addTo(map);
+
+// ---------- 矿点（散点 + jitter，默认） ----------
+var clustering = false;
+var activeGroup = L.layerGroup().addTo(map);
+var markers = {};
+var placedPts = [];
+
+function layoutPoints(list){
+  var placed = [];
+  return list.map(function(m){
+    var lat = m.lat, lng = m.lng;
+    if(!clustering && lat!=null && lng!=null){
+      var nearest = null, minD = Infinity;
+      for(var i=0;i<placed.length;i++){
+        var p = placed[i];
+        var d = (p.lat-lat)*(p.lat-lat) + (p.lng-lng)*(p.lng-lng);
+        if(d < minD){ minD = d; nearest = p; }
+      }
+      if(nearest && minD < 0.0013){
+        var angle = nearest.count * (2*Math.PI/8);
+        nearest.count += 1;
+        var r = 0.03;
+        var dlat = r * Math.cos(angle);
+        var dlng = r * Math.sin(angle) / Math.max(0.3, Math.cos(lat*Math.PI/180));
+        lat += dlat; lng += dlng;
+      }
+    }
+    placed.push({lat:lat, lng:lng, count:1});
+    return [lat, lng];
+  });
+}
+
+function makeIcon(m){
+  return L.divIcon({ className:'mine-dot-wrap',
+    html:'<div class="mine-dot" style="background:'+colorOf(m.commodity)+'"></div>',
+    iconSize:[12,12], iconAnchor:[6,6], popupAnchor:[0,-6] });
+}
+
+function rows(pairs){
+  return pairs.filter(function(p){ return p[1]!=null && p[1]!==''; })
+    .map(function(p){ return '<tr><td class="k">'+p[0]+'</td><td>'+esc(p[1])+'</td></tr>'; }).join('');
+}
+
+function resGroup(title, pairs){
+  var body = rows(pairs);
+  if(!body) return '';
+  return '<div class="pp-sub">'+esc(title)+'</div><table>'+body+'</table>';
+}
+
+function resExtraBlock(m){
+  var extra = m.resExtra || [];
+  if(!extra.length) return '';
+  var h = '<div class="pp-sub">'+T.resExtraTitle+'</div><table>';
+  extra.forEach(function(e){
+    var parts = [];
+    if(e.grade!=null && e.grade!=='') parts.push('品位 '+fmt(e.grade)+' '+(e.gradeUnit||''));
+    if(e.contained!=null && e.contained!=='') parts.push('金属量 '+fmt(e.contained)+' '+(e.containedUnit||''));
+    var metal = e.metal || '';
+    var cat = e.category ? ' ('+e.category+')' : '';
+    var year = e.year ? ' <span style="color:#999">('+esc(e.year)+')</span>' : '';
+    var src = e.source ? ' <span style="color:#999">['+esc(e.source)+']</span>' : '';
+    h += '<tr><td class="k">'+esc(metal)+esc(cat)+'</td><td>'+esc(parts.join('，'))+year+src+'</td></tr>';
+  });
+  return h + '</table>';
+}
+
+function minePopup(m){
+  var h = '<div class="pp"><h3>'+esc(m.name)+'</h3>';
+  h += '<div class="pp-sec">'+T.popupBasic+'</div><table>'+rows([
+    [T.f_country, m.countryCn], [T.f_state, m.stateProvince], [T.f_commodity, commName(m.commodity)],
+    [T.f_stage, m.devStage], [T.f_status, m.actvStatus]])+'</table>';
+  h += '<div class="pp-sec">'+T.popupOwnership+'</div><table>'+rows([
+    [T.f_ownerName, m.ownerName], [T.f_ownerType, m.ownerType], [T.f_ownerList, m.ownerList]])+'</table>';
+  h += '<div class="pp-sec">'+T.popupResources+'</div>';
+  var resBody = resGroup(T.resCu, [
+    [T.f_MIgr, fv(m.grdCuMI, T.unitPct)], [T.f_MIct, fv(m.containedCuMI, T.unitT)],
+    [T.f_totgr, fv(m.grdCuTotal, T.unitPct)], [T.f_totct, fv(m.containedCuTotal, T.unitT)],
+    [T.f_Resgr, fv(m.grdCuMIRes, T.unitPct)], [T.f_Resct, fv(m.containedCuMIRes, T.unitT)]])
+    + resGroup(T.resAu, [
+      [T.f_MIgr, fv(m.grdAuMI, T.unitGt)], [T.f_MIct, fv(m.containedAuMI, T.unitOz)],
+      [T.f_totgr, fv(m.grdAuTotal, T.unitGt)], [T.f_totct, fv(m.containedAuTotal, T.unitOz)]])
+    + resGroup(T.resProd, [
+      [T.f_prodCu, fv(m.prodCu, T.unitT)], [T.f_prodAu, fv(m.prodAu, T.unitOz)],
+      [T.f_millCu, fv(m.millCu, T.unitGt)], [T.f_millAu, fv(m.millAu, T.unitGt)]])
+    + resExtraBlock(m);
+  if(resBody){
+    h += resBody;
+  } else {
+    var sg = stageGroupOf(m);
+    h += '<div style="color:#999;font-size:12px;padding:2px 0;">'+esc((sg==='production'||sg==='development') ? T.resNoDataProd : T.resNoData)+'</div>';
+  }
+  h += '<div class="pp-sec">'+T.popupLoc+'</div><table>'+rows([
+    [T.f_commList, m.commoditiesList], [T.f_coord, (m.lat!=null&&m.lng!=null)?(m.lat.toFixed(4)+', '+m.lng.toFixed(4)):''],
+    [T.f_locComment, m.locationComments]])+'</table>';
+  return h + '</div>';
+}
+
+function buildMapMarkers(){
+  if(activeGroup){ map.removeLayer(activeGroup); }
+  markers = [];
+  activeGroup = clustering ? L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:45, spiderfyOnMaxZoom:true, zoomToBoundsOnClick:true}) : L.layerGroup();
+  activeGroup.addTo(map);
+  placedPts = layoutPoints(mines);
+  mines.forEach(function(m, i){
+    if(m.lat==null || m.lng==null) return;
+    var mk = L.marker(placedPts[i], {icon: makeIcon(m)}).bindPopup(minePopup(m));
+    activeGroup.addLayer(mk);
+    markers[i] = mk;
+  });
+}
+
+// ---------- 矿权（默认隐藏） ----------
+var claimsLayer = null;
+function claimPopup(c){
+  var h = '<div class="pp"><h3>'+T.claimTitle+'：'+esc(c.name)+'</h3>';
+  h += '<div class="pp-sec">'+T.claimTitle+'</div><table>'+rows([
+    [T.c_type, c.type], [T.c_status, c.status], [T.c_commodity, commName(c.commodity)], [T.c_area, c.area]])+'</table>';
+  h += '<div class="pp-sec">'+T.popupOwnership+'</div><table>'+rows([[T.c_owners, c.owners]])+'</table>';
+  h += '<div class="pp-sec">'+T.popupLoc+'</div><table>'+rows([
+    [T.c_applied, c.applied], [T.c_granted, c.granted], [T.c_expiry, c.expiry]])+'</table>';
+  return h + '</div>';
+}
+function buildClaims(){
+  if(claimsLayer) return;
+  claimsLayer = L.layerGroup();
+  claims.forEach(function(c){
+    if(!c.ring || c.ring.length < 3) return;
+    var latlngs = c.ring.map(function(p){ return [p[1], p[0]]; });
+    L.polygon(latlngs, { color: colorOf(c.commodity), weight:0.5, fillColor: colorOf(c.commodity), fillOpacity:0.06 })
+      .addTo(claimsLayer).bindPopup(claimPopup(c));
+  });
+}
+
+// ---------- 图例 ----------
+function buildLegend(){
+  var counts = {};
+  mines.forEach(function(m){ counts[m.commodity]=(counts[m.commodity]||0)+1; });
+  var order = Object.keys(colors).filter(function(c){ return counts[c]; });
+  var el = document.getElementById('legend');
+  var h = '<div class="lg-title">'+T.legendTitle+'</div>';
+  order.forEach(function(c){
+    h += '<div class="lg-row"><span class="lg-dot" style="background:'+colors[c]+'"></span>'+esc(commName(c))+' <span class="lg-cnt">'+counts[c]+'</span></div>';
+  });
+  el.innerHTML = h;
+}
+
+// ---------- 侧栏 + 筛选 ----------
+var selected = [];  // [{type:'country'|'company', label}]
+var expanded = {};  // 'dim:key' -> true
+var currentDim = 'country';
+var LANG = 'en';
+
+// 公司主体聚合：跨多国的同一主体（如 CNMC 在 DRC/Zambia）合并为一个主体
+var companyById = {};
+companies.forEach(function(c){ companyById[c.id] = c; });
+var companyGroups = {};
+companies.forEach(function(c){
+  var key = (c.nameZh && c.nameZh.trim()) ? c.nameZh : c.name;
+  if(!companyGroups[key]){
+    companyGroups[key] = { key:key, nameZh:c.nameZh, name:c.name, countries:[], ids:[], tier:c.tier, category:c.category };
+  }
+  if(companyGroups[key].countries.indexOf(c.country) < 0) companyGroups[key].countries.push(c.country);
+  if(companyGroups[key].ids.indexOf(c.id) < 0) companyGroups[key].ids.push(c.id);
+});
+var CAT_ORDER = ['中资', '国际巨头', '国有', '中小勘探'];
+function catName(cat){ return (T.catNames && T.catNames[cat]) ? T.catNames[cat] : cat; }
+// 矿点开发阶段：归并为 5 大阶段 + 未分类
+var STAGE_MAP = {
+  'Operating':'production', 'Expansion':'production', 'Satellite':'production',
+  'Limited Production':'production', 'Commissioning':'production',
+  'Preproduction':'development', 'Reserves Development':'development',
+  'Construction Started':'development', 'Construction Planned':'development',
+  'Feasibility':'feasibility', 'Feasibility Started':'feasibility',
+  'Feasibility Complete':'feasibility', 'Prefeas/Scoping':'feasibility',
+  'Exploration':'exploration', 'Advanced Exploration':'exploration',
+  'Grassroots':'exploration', 'Target Outline':'exploration',
+  'Closed':'closed'
+};
+var STAGE_ORDER = ['production', 'development', 'feasibility', 'exploration', 'closed', 'unclassified'];
+function stageGroupOf(m){ var s = m.devStage; if(!s) return 'unclassified'; return STAGE_MAP[s] || 'unclassified'; }
+function stageName(key){ return (T.stageNames && T.stageNames[key]) ? T.stageNames[key] : key; }
+function stageColor(key){
+  return {'production':'#e74c3c','development':'#f39c12','feasibility':'#16a085','exploration':'#3498db','closed':'#95a5a6','unclassified':'#bdc3c7'}[key] || '#95a5a6';
+}
+var countryCnMap = {};
+companies.forEach(function(c){ countryCnMap[c.country] = c.countryCn; });
+function countryName(code){ return countryCnMap[code] || code; }
+function companyLabel(g){
+  if(!g) return '';
+  return (LANG === 'zh') ? (g.nameZh || g.name) : (g.name || g.nameZh);
+}
+function displayLabel(type, label){
+  if(type === 'company'){ var g = companyGroups[label]; return g ? companyLabel(g) : label; }
+  if(type === 'country') return countryName(label);
+  if(type === 'category') return catName(label);
+  if(type === 'stage') return stageName(label);
+  return label;
+}
+function isExpanded(key){ return !!expanded[currentDim + ':' + key]; }
+
+function hit(m){
+  // 四个维度（国家/公司/分类/阶段）各自内部 OR，维度之间 AND
+  var countries = selected.filter(function(s){ return s.type==='country'; }).map(function(s){ return s.label; });
+  var compKeys = selected.filter(function(s){ return s.type==='company'; }).map(function(s){ return s.label; });
+  var cats = selected.filter(function(s){ return s.type==='category'; }).map(function(s){ return s.label; });
+  var stages = selected.filter(function(s){ return s.type==='stage'; }).map(function(s){ return s.label; });
+  if(countries.length && countries.indexOf(m.country) < 0) return false;
+  if(stages.length && stages.indexOf(stageGroupOf(m)) < 0) return false;
+  if(compKeys.length){
+    var list = m.companies || [];
+    var hitCompany = compKeys.some(function(key){
+      var g = companyGroups[key];
+      if(!g) return list.indexOf(key) >= 0;
+      return g.ids.some(function(id){ return list.indexOf(id) >= 0; });
+    });
+    if(!hitCompany) return false;
+  }
+  if(cats.length){
+    var list2 = m.companies || [];
+    var hitCat = cats.some(function(cat){
+      return list2.some(function(id){ var c = companyById[id]; return c && c.category === cat; });
+    });
+    if(!hitCat) return false;
+  }
+  return true;
+}
+function applyFilter(){
+  mines.forEach(function(m, i){
+    var mk = markers[i];
+    if(!mk) return;
+    if(hit(m)){ if(!activeGroup.hasLayer(mk)) mk.addTo(activeGroup); }
+    else { if(activeGroup.hasLayer(mk)) activeGroup.removeLayer(mk); }
+  });
+}
+function isSelected(type, label){
+  return selected.some(function(s){ return s.type===type && s.label===label; });
+}
+function renderChips(){
+  var el = document.getElementById('sb-filter');
+  var h = '';
+  selected.forEach(function(s){
+    var cls = s.type==='country' ? 'chip-c-country' : (s.type==='category' ? 'chip-c-category' : (s.type==='stage' ? 'chip-c-stage' : 'chip-c-company'));
+    h += '<span class="chip '+cls+'">'+esc(displayLabel(s.type, s.label))+'<span class="x" data-remove="'+esc(s.type)+'|'+esc(s.label)+'">×</span></span>';
+  });
+  if(selected.length>0) h += '<button class="clear" id="clear-all">'+T.clearAll+'</button>';
+  el.innerHTML = h;
+}
+function highlightSidebar(){
+  document.querySelectorAll('.sb-row, .sb-child').forEach(function(el){
+    var dim = el.getAttribute('data-dim');
+    var label = el.getAttribute('data-label');
+    if(isSelected(dim, label)) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+}
+function mineCountForCompany(key){
+  var g = companyGroups[key];
+  if(!g) return 0;
+  return mines.filter(function(m){ return (m.companies||[]).some(function(id){ return g.ids.indexOf(id)>=0; }); }).length;
+}
+function mineCountForPair(cc, key){
+  var g = companyGroups[key];
+  if(!g) return 0;
+  return mines.filter(function(m){
+    return m.country === cc && (m.companies||[]).some(function(id){ return g.ids.indexOf(id)>=0; });
+  }).length;
+}
+function catMineCount(cat){
+  return mines.filter(function(m){
+    return (m.companies||[]).some(function(id){ var c = companyById[id]; return c && c.category === cat; });
+  }).length;
+}
+function stageMineCount(key){
+  return mines.filter(function(m){ return stageGroupOf(m) === key; }).length;
+}
+function buildStageFilter(){
+  var el = document.getElementById('stage-list');
+  var h = '';
+  STAGE_ORDER.forEach(function(key){
+    var cnt = stageMineCount(key);
+    if(cnt === 0) return;
+    var checked = isSelected('stage', key) ? ' checked' : '';
+    h += '<label class="sp-item"><input type="checkbox" data-stage="'+esc(key)+'"'+checked+'><span class="sp-dot" style="background:'+stageColor(key)+'"></span><span class="sp-lbl">'+esc(stageName(key))+'</span><span class="sp-cnt">'+cnt+'</span></label>';
+  });
+  el.innerHTML = h;
+}
+function highlightStageFilter(){
+  document.querySelectorAll('#stage-list input[data-stage]').forEach(function(cb){
+    cb.checked = isSelected('stage', cb.getAttribute('data-stage'));
+  });
+}
+function buildCountryTree(){
+  var order = ['DRC','Zambia','Namibia','Botswana'];
+  var compByCountry = {};
+  Object.keys(companyGroups).forEach(function(key){
+    companyGroups[key].countries.forEach(function(cc){ (compByCountry[cc]=compByCountry[cc]||[]).push(key); });
+  });
+  var h = '';
+  order.forEach(function(cc){
+    var mineCnt = mines.filter(function(m){ return m.country===cc; }).length;
+    if(mineCnt === 0) return;
+    var cn = countryName(cc);
+    h += '<div class="sb-node'+(isExpanded(cc)?' open':'')+'" data-node="'+esc(cc)+'">';
+    h += '<div class="sb-row" data-dim="country" data-label="'+esc(cc)+'"><span class="exp-arrow">▸</span><span class="lbl">'+esc(cn)+'</span><span class="cnt">'+mineCnt+' '+T.minesInCountry+'</span></div>';
+    h += '<div class="sb-children">';
+    (compByCountry[cc]||[]).forEach(function(key){
+      h += '<div class="sb-child" data-dim="company" data-label="'+esc(key)+'"><span class="dot" style="background:#b0bec5"></span><span class="lbl">'+esc(companyLabel(companyGroups[key]))+'</span><span class="cnt">'+mineCountForPair(cc, key)+' '+T.minesInCountry+'</span></div>';
+    });
+    h += '</div></div>';
+  });
+  return h;
+}
+function buildCompanyTree(){
+  // 公司维度：分类 -> 公司主体 -> 国家 三层，均可多选筛选
+  var groupsByCat = {};
+  Object.keys(companyGroups).forEach(function(key){
+    var g = companyGroups[key];
+    var cat = g.category || '中小勘探';
+    (groupsByCat[cat] = groupsByCat[cat] || []).push(g);
+  });
+  var h = '';
+  CAT_ORDER.forEach(function(cat){
+    var list = groupsByCat[cat] || [];
+    if(list.length === 0) return;
+    list.sort(function(a,b){
+      var na = mineCountForCompany(a.key), nb = mineCountForCompany(b.key);
+      if(na !== nb) return nb - na;
+      return (companyLabel(a)||'').localeCompare(companyLabel(b)||'');
+    });
+    var catMines = catMineCount(cat);
+    h += '<div class="sb-node'+(isExpanded(cat)?' open':'')+'" data-node="'+esc(cat)+'">';
+    h += '<div class="sb-row sb-cat" data-dim="category" data-label="'+esc(cat)+'"><span class="exp-arrow">▸</span><span class="lbl">'+esc(catName(cat))+'</span><span class="cnt">'+catMines+' '+T.minesInCountry+' · '+list.length+' '+T.badgeCompanies+'</span></div>';
+    h += '<div class="sb-children">';
+    list.forEach(function(g){
+      var key = g.key;
+      var n = mineCountForCompany(key);
+      h += '<div class="sb-node'+(isExpanded(key)?' open':'')+'" data-node="'+esc(key)+'">';
+      h += '<div class="sb-row" data-dim="company" data-label="'+esc(key)+'"><span class="exp-arrow">▸</span><span class="lbl">'+esc(companyLabel(g))+'</span><span class="cnt">'+n+' '+T.minesInCountry+'</span></div>';
+      h += '<div class="sb-children">';
+      g.countries.forEach(function(cc){
+        h += '<div class="sb-child child-country" data-dim="country" data-label="'+esc(cc)+'"><span class="dot" style="background:#0f62fe"></span><span class="lbl">'+esc(countryName(cc))+'</span><span class="cnt">'+mineCountForPair(cc, key)+' '+T.minesInCountry+'</span></div>';
+      });
+      h += '</div></div>';
+    });
+    h += '</div></div>';
+  });
+  return h;
+}
+function renderSidebar(){
+  var el = document.getElementById('sb-list');
+  el.innerHTML = (currentDim === 'country') ? buildCountryTree() : buildCompanyTree();
+  highlightSidebar();
+}
+function switchDim(dim){
+  currentDim = dim;
+  expanded = {};
+  document.querySelectorAll('.sb-tab').forEach(function(b){
+    if(b.getAttribute('data-dim')===dim) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+  renderSidebar();
+}
+function toggleExpand(key, nodeEl){
+  var k = currentDim + ':' + key;
+  if(expanded[k]){ delete expanded[k]; nodeEl.classList.remove('open'); }
+  else { expanded[k] = true; nodeEl.classList.add('open'); }
+}
+function toggleSelection(type, label){
+  if(isSelected(type, label)) selected = selected.filter(function(s){ return !(s.type===type && s.label===label); });
+  else selected.push({type:type, label:label});
+  applyFilter(); renderChips(); highlightSidebar(); highlightStageFilter();
+}
+
+// ---------- 事件 ----------
+document.addEventListener('click', function(e){
+  var t = e.target;
+  // 维度切换
+  var tab = t.closest('.sb-tab');
+  if(tab){ switchDim(tab.getAttribute('data-dim')); return; }
+  // 展开/折叠
+  var arrow = t.closest('.exp-arrow');
+  if(arrow){
+    var node = arrow.closest('.sb-node');
+    toggleExpand(node.getAttribute('data-node'), node);
+    return;
+  }
+  // 顶层行（国家 / 公司主体）
+  var row = t.closest('.sb-row');
+  if(row){ toggleSelection(row.getAttribute('data-dim'), row.getAttribute('data-label')); return; }
+  // 子项（国家 / 公司）
+  var child = t.closest('.sb-child');
+  if(child){ toggleSelection(child.getAttribute('data-dim'), child.getAttribute('data-label')); return; }
+  // chip 移除
+  var rm = t.closest('[data-remove]');
+  if(rm){
+    var parts = rm.getAttribute('data-remove').split('|');
+    toggleSelection(parts[0], parts[1]); return;
+  }
+  // 清空
+  if(t.id === 'clear-all'){ selected = []; applyFilter(); renderChips(); highlightSidebar(); highlightStageFilter(); }
+});
+
+document.getElementById('cluster-toggle').addEventListener('change', function(e){
+  clustering = e.target.checked;
+  buildMapMarkers();
+  applyFilter();
+});
+document.getElementById('claims-toggle').addEventListener('change', function(e){
+  buildClaims();
+  if(e.target.checked){ claimsLayer.addTo(map); }
+  else { if(claimsLayer) map.removeLayer(claimsLayer); }
+});
+document.getElementById('stage-list').addEventListener('change', function(e){
+  var cb = e.target;
+  if(cb.getAttribute('data-stage')) toggleSelection('stage', cb.getAttribute('data-stage'));
+});
+
+// ---------- 初始化 ----------
+document.getElementById('kpiMines').textContent = mines.length;
+document.getElementById('kpiClaims').textContent = claims.length;
+document.getElementById('kpiCompanies').textContent = companies.length;
+buildMapMarkers();
+buildLegend();
+renderSidebar();
+buildStageFilter();
+var b = L.latLngBounds(mines.filter(function(m){return m.lat!=null;}).map(function(m){ return [m.lat, m.lng]; }));
+map.fitBounds(b.pad(0.05));
+</script>
+</body>
+</html>
